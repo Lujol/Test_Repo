@@ -33,7 +33,7 @@ jobs:
             
             PAYLOAD=$(jq -n\
             --arg content "**[PR 승인 알림]**
-            [$PR_TITLE #$PR_NUMBER]($PR_URL)이(가) 필요한 모든 승인을 받았습니다!"\
+            **[$PR_TITLE #$PR_NUMBER]($PR_URL)**이(가) 필요한 모든 승인을 받았습니다!"\
              '{content: $content}')
 
             curl -H "Content-Type: application/json" \
