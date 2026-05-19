@@ -1,0 +1,39 @@
+name: PR Fully Approved Notification
+
+# 누군가 리뷰를 남길 때마다 실행됩니다.
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  notify-discord:
+    # 리뷰가 'Approve'일 때만 일단 트리거를 태웁니다.
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Check if PR meets all approval requirements
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          # GitHub CLI를 이용해 PR의 최종 승인 상태(reviewDecision)를 가져옵니다.
+          STATUS=$(gh pr view ${{ github.event.pull_request.html_url }} --json reviewDecision -q .reviewDecision)
+          echo "현재 PR 승인 상태: $STATUS"
+          
+          # Branch Protection Rule에 설정된 승인 수를 모두 채웠다면 STATUS는 'APPROVED'가 됩니다.
+          if [ "$STATUS" == "APPROVED" ]; then
+            echo "필요한 모든 승인을 받았습니다. Discord로 알림을 전송합니다."
+            
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{
+                   "content": "🚀 **[PR 완료 알림]**\nPR [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }})이(가) 필요한 모든 승인을 받았습니다! 이제 Merge가 가능합니다."
+                 }' \
+                 $DISCORD_WEBHOOK
+          else
+            echo "아직 추가 승인이 필요합니다. 알림을 보내지 않습니다."
+          fi
